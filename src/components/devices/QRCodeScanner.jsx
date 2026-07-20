@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { QrReader } from 'react-qr-reader';
+import QrScanner from 'react-qr-scanner';
 import toast from 'react-hot-toast';
 
 const QRCodeScanner = ({ onClose, onScan }) => {
@@ -8,18 +8,15 @@ const QRCodeScanner = ({ onClose, onScan }) => {
   const [isScanning, setIsScanning] = useState(true);
   const fileInputRef = useRef(null);
 
-  // Handle scan result
-  const handleScan = async (result) => {
-    if (result && !loading) {
+  const handleScan = (data) => {
+    if (data && !loading) {
       setLoading(true);
       try {
-        // Try to parse as JSON
         let deviceData;
         try {
-          deviceData = JSON.parse(result.text || result);
+          deviceData = JSON.parse(data.text || data);
         } catch {
-          // If not JSON, treat as device ID
-          deviceData = { deviceId: result.text || result };
+          deviceData = { deviceId: data.text || data };
         }
         
         setIsScanning(false);
@@ -37,13 +34,7 @@ const QRCodeScanner = ({ onClose, onScan }) => {
 
   const handleError = (err) => {
     console.error('QR Scanner error:', err);
-    if (err?.name === 'NotAllowedError') {
-      setError('Izin kamera ditolak. Mohon izinkan akses kamera.');
-    } else if (err?.name === 'NotFoundError') {
-      setError('Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera.');
-    } else {
-      setError('Gagal mengakses kamera');
-    }
+    setError('Gagal mengakses kamera');
   };
 
   const handleFileUpload = (event) => {
@@ -54,13 +45,18 @@ const QRCodeScanner = ({ onClose, onScan }) => {
     reader.onload = (e) => {
       try {
         const result = e.target.result;
-        // Simulate QR scan from image
         handleScan({ text: result });
       } catch (error) {
         toast.error('Gagal membaca file');
       }
     };
     reader.readAsText(file);
+  };
+
+  const previewStyle = {
+    height: 300,
+    width: 300,
+    objectFit: 'cover',
   };
 
   return (
@@ -84,45 +80,31 @@ const QRCodeScanner = ({ onClose, onScan }) => {
           {error ? (
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">{error}</p>
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    setError(null);
-                    setIsScanning(true);
-                  }}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  Coba Lagi
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                  Upload Gambar QR
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setIsScanning(true);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Coba Lagi
+              </button>
             </div>
           ) : (
             <div className="relative">
               <div className="aspect-square max-w-[300px] mx-auto overflow-hidden rounded-lg bg-black">
                 {isScanning ? (
-                  <QrReader
-                    onResult={handleScan}
+                  <QrScanner
+                    delay={300}
                     onError={handleError}
-                    constraints={{ 
-                      facingMode: 'environment',
-                      width: { ideal: 300 },
-                      height: { ideal: 300 }
-                    }}
-                    videoStyle={{ 
-                      width: '100%', 
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                    containerStyle={{ 
-                      width: '100%', 
-                      height: '100%',
-                      overflow: 'hidden'
+                    onScan={handleScan}
+                    style={previewStyle}
+                    constraints={{
+                      video: {
+                        facingMode: 'environment',
+                        width: { ideal: 300 },
+                        height: { ideal: 300 }
+                      }
                     }}
                   />
                 ) : (
@@ -143,38 +125,25 @@ const QRCodeScanner = ({ onClose, onScan }) => {
                 <p>Arahkan kamera ke QR Code perangkat</p>
                 <p className="mt-1">Pastikan QR Code terlihat jelas</p>
               </div>
-              <div className="mt-4">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
-                >
-                  📷 Upload Gambar QR
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </div>
-              <button
-                onClick={() => setIsScanning(!isScanning)}
-                className="mt-2 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                {isScanning ? '⏸️ Pause' : '▶️ Lanjutkan Scan'}
-              </button>
             </div>
           )}
         </div>
 
         <div className="p-4 border-t dark:border-gray-700">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
-          >
-            Tutup
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={() => setIsScanning(!isScanning)}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              {isScanning ? '⏸️ Pause' : '▶️ Lanjutkan'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
