@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { QrReader } from 'react-qr-reader';
 import toast from 'react-hot-toast';
 
 const QRCodeScanner = ({ onClose, onScan }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isScanning, setIsScanning] = useState(true);
+  const fileInputRef = useRef(null);
 
-  const handleScan = async (data) => {
-    if (data && !loading) {
+  // Handle scan result
+  const handleScan = async (result) => {
+    if (result && !loading) {
       setLoading(true);
       try {
-        // Parse QR code data
-        const deviceData = JSON.parse(data);
+        // Try to parse as JSON
+        let deviceData;
+        try {
+          deviceData = JSON.parse(result.text || result);
+        } catch {
+          // If not JSON, treat as device ID
+          deviceData = { deviceId: result.text || result };
+        }
+        
+        setIsScanning(false);
         onScan?.(deviceData);
         toast.success('QR Code berhasil dipindai');
       } catch (error) {
@@ -24,9 +35,32 @@ const QRCodeScanner = ({ onClose, onScan }) => {
     }
   };
 
-  const handleError = (error) => {
-    console.error('QR Scanner error:', error);
-    setError('Gagal mengakses kamera');
+  const handleError = (err) => {
+    console.error('QR Scanner error:', err);
+    if (err?.name === 'NotAllowedError') {
+      setError('Izin kamera ditolak. Mohon izinkan akses kamera.');
+    } else if (err?.name === 'NotFoundError') {
+      setError('Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera.');
+    } else {
+      setError('Gagal mengakses kamera');
+    }
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const result = e.target.result;
+        // Simulate QR scan from image
+        handleScan({ text: result });
+      } catch (error) {
+        toast.error('Gagal membaca file');
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -50,22 +84,52 @@ const QRCodeScanner = ({ onClose, onScan }) => {
           {error ? (
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">{error}</p>
-              <button
-                onClick={() => setError(null)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Coba Lagi
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setIsScanning(true);
+                  }}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Coba Lagi
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Upload Gambar QR
+                </button>
+              </div>
             </div>
           ) : (
             <div className="relative">
               <div className="aspect-square max-w-[300px] mx-auto overflow-hidden rounded-lg bg-black">
-                <QrReader
-                  onResult={handleScan}
-                  onError={handleError}
-                  constraints={{ facingMode: 'environment' }}
-                  containerStyle={{ width: '100%', height: '100%' }}
-                />
+                {isScanning ? (
+                  <QrReader
+                    onResult={handleScan}
+                    onError={handleError}
+                    constraints={{ 
+                      facingMode: 'environment',
+                      width: { ideal: 300 },
+                      height: { ideal: 300 }
+                    }}
+                    videoStyle={{ 
+                      width: '100%', 
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                    containerStyle={{ 
+                      width: '100%', 
+                      height: '100%',
+                      overflow: 'hidden'
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                    <p className="text-white text-sm">Scan selesai</p>
+                  </div>
+                )}
               </div>
               {loading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -79,6 +143,27 @@ const QRCodeScanner = ({ onClose, onScan }) => {
                 <p>Arahkan kamera ke QR Code perangkat</p>
                 <p className="mt-1">Pastikan QR Code terlihat jelas</p>
               </div>
+              <div className="mt-4">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
+                >
+                  📷 Upload Gambar QR
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+              <button
+                onClick={() => setIsScanning(!isScanning)}
+                className="mt-2 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                {isScanning ? '⏸️ Pause' : '▶️ Lanjutkan Scan'}
+              </button>
             </div>
           )}
         </div>
