@@ -5,7 +5,9 @@ import {
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
-  signOut as firebaseSignOut
+  signOut as firebaseSignOut,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from '../services/firebase';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -131,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     forgotPassword,
-    isAdmin: user?.email === 'admin@example.com' // Sesuaikan dengan role admin
+    isAdmin: user?.email === 'admin@example.com'
   };
 
   return (
