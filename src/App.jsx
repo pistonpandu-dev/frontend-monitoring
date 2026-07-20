@@ -12,8 +12,11 @@ import DeviceList from './components/devices/DeviceList';
 import DeviceDetails from './components/devices/DeviceDetails';
 import LiveMonitor from './components/monitoring/LiveMonitor';
 import LocationTracker from './components/monitoring/LocationTracker';
+import DeviceInfo from './components/monitoring/DeviceInfo';
 import DeviceControls from './components/controls/DeviceControls';
 import { setupFCMListener, requestPermission } from './services/fcm';
+import { auth } from './services/firebase';
+import { updateFCMToken } from './services/fcm';
 import './index.css';
 
 const App = () => {
@@ -79,6 +82,7 @@ const App = () => {
                 <Route path="/devices/:id" element={<DeviceDetails />} />
                 <Route path="/monitoring" element={<LiveMonitor />} />
                 <Route path="/monitoring/location" element={<LocationTracker />} />
+                <Route path="/monitoring/info" element={<DeviceInfo />} />
                 <Route path="/controls" element={<DeviceControls />} />
               </Route>
             </Route>
